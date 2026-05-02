@@ -1,6 +1,7 @@
 package pages;
 
 import org.openqa.selenium.By;
+import org.openqa.selenium.Keys;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
@@ -18,6 +19,8 @@ public class LoginPage {
     private By emailField = By.xpath("//input[@type='email']");
     private By passwordField = By.xpath("//input[@type='password']");
     private By loginBtn = By.xpath("//button[contains(text(),'Login')]");
+    private By forgotPassword = By.xpath("//a[contains(text(),'Forgot')]");
+private By contactUs = By.xpath("//*[contains(text(),'Contact')]");
 
     public void enterEmail(String email) {
         wait.until(ExpectedConditions.visibilityOfElementLocated(emailField)).clear();
@@ -32,6 +35,47 @@ public class LoginPage {
     public void clickLogin() {
         wait.until(ExpectedConditions.elementToBeClickable(loginBtn)).click();
     }
+    // 🔹 Press Enter (TC_LGN_010)
+public void pressEnter() {
+    wait.until(ExpectedConditions.visibilityOfElementLocated(passwordField))
+        .sendKeys(Keys.ENTER);
+}
+
+
+// 🔹 Forgot Password click (TC_LGN_011)
+public void clickForgotPassword() {
+    wait.until(ExpectedConditions.elementToBeClickable(forgotPassword)).click();
+}
+
+
+// 🔹 Contact Us visible (TC_LGN_012)
+public boolean isContactUsVisible() {
+    return wait.until(ExpectedConditions.visibilityOfElementLocated(contactUs)).isDisplayed();
+}
+
+
+// 🔹 Password field type check (TC_LGN_015)
+public String getPasswordFieldType() {
+    return driver.findElement(passwordField).getAttribute("type");
+}
+
+
+// 🔹 Login page loaded (TC_LGN_016)
+public boolean isLoginPageLoaded() {
+    return wait.until(ExpectedConditions.visibilityOfElementLocated(loginBtn)).isDisplayed();
+}
+
+
+// 🔹 Get email value (TC_LGN_018)
+public String getEmailValue() {
+    return driver.findElement(emailField).getAttribute("value");
+}
+
+
+// 🔹 Get password value (TC_LGN_018)
+public String getPasswordValue() {
+    return driver.findElement(passwordField).getAttribute("value");
+}
 
     // ✅ FIXED METHOD (WAIT + CAPTURE ALERT PROPERLY)
     public String getLoginErrorMessage() {
