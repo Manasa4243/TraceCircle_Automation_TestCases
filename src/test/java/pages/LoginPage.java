@@ -16,7 +16,7 @@ public class LoginPage {
         this.wait = wait;
     }
 
-    private By emailField = By.xpath("//input[@type='email']");
+   private By emailField = By.xpath("//label[normalize-space()='Email']/following::input[1]");
     private By passwordField = By.xpath("//input[@type='password']");
     private By loginBtn = By.xpath("//button[contains(text(),'Login')]");
     private By forgotPassword = By.xpath("//a[contains(text(),'Forgot')]");
@@ -57,7 +57,7 @@ public boolean isContactUsVisible() {
 // 🔹 Password field type check (TC_LGN_015)
 public String getPasswordFieldType() {
     return driver.findElement(passwordField).getAttribute("type");
-}
+}   
 
 
 // 🔹 Login page loaded (TC_LGN_016)
@@ -70,7 +70,9 @@ public boolean isLoginPageLoaded() {
 public String getEmailValue() {
     return driver.findElement(emailField).getAttribute("value");
 }
-
+public boolean isLoginButtonEnabled() {
+    return wait.until(ExpectedConditions.presenceOfElementLocated(loginBtn)).isEnabled();
+}
 
 // 🔹 Get password value (TC_LGN_018)
 public String getPasswordValue() {
@@ -103,5 +105,29 @@ public String getPasswordValue() {
         } catch (Exception e) {
             return false;
         }
+        
     }
+    public boolean isSessionCreated() {
+    try {
+        Long localStorageSize = (Long) ((org.openqa.selenium.JavascriptExecutor) driver)
+                .executeScript("return window.localStorage.length;");
+
+        Long sessionStorageSize = (Long) ((org.openqa.selenium.JavascriptExecutor) driver)
+                .executeScript("return window.sessionStorage.length;");
+
+        return localStorageSize > 0 || sessionStorageSize > 0;
+
+    } catch (Exception e) {
+        return false;
+    }
+}
+public void clickLogout() {
+    By logoutBtn = By.xpath("//button[contains(text(),'Logout') or contains(text(),'Sign out') or contains(text(),'Log out')]");
+    wait.until(ExpectedConditions.elementToBeClickable(logoutBtn)).click();
+}
+
+
+
+
+
 }

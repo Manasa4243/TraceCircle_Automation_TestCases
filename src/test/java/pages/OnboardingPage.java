@@ -1,5 +1,6 @@
 package pages;
 
+import org.openqa.selenium.Alert;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
@@ -31,9 +32,10 @@ public class OnboardingPage {
     // ⚠️ Use flexible locator (label text may vary)
     private By password = By.xpath("//input[@type='password'][1]");
     private By confirmPassword = By.xpath("(//input[@type='password'])[2]");
-
     private By createAccountBtn = By.xpath("//button[contains(text(),'Create') or contains(text(),'Onboard')]");
-
+private By backBtn = By.xpath("//button[contains(text(),'Back')]");
+private By loginHereLink = By.xpath("//a[contains(text(),'Login here')]");
+private By orgIdField = By.xpath("//label[contains(text(),'Organization ID')]/following::input[1]");
     // ================= COMMON =================
 
     private By successMsg = By.xpath("//*[contains(text(),'success') or contains(text(),'created')]");
@@ -80,6 +82,69 @@ public class OnboardingPage {
         enterLocation(loc);
         clickOnboard();
     }
+    public boolean isStep2Displayed() {
+    try {
+        wait.until(ExpectedConditions.visibilityOfElementLocated(step2Email));
+        return true;
+    } catch (Exception e) {
+        return false;
+    }
+}
+
+public boolean isOrgIdVisible() {
+    return wait.until(ExpectedConditions.visibilityOfElementLocated(orgIdField)).isDisplayed();
+}
+
+public String getPasswordFieldType() {
+    return wait.until(ExpectedConditions.visibilityOfElementLocated(password)).getAttribute("type");
+}
+
+public String getConfirmPasswordFieldType() {
+    return wait.until(ExpectedConditions.visibilityOfElementLocated(confirmPassword)).getAttribute("type");
+}
+
+public void clickBack() {
+    wait.until(ExpectedConditions.elementToBeClickable(backBtn)).click();
+}
+
+public void clickLoginHere() {
+    wait.until(ExpectedConditions.elementToBeClickable(loginHereLink)).click();
+}
+public String getEmailValidationMessage() {
+    WebElement emailInput = wait.until(ExpectedConditions.visibilityOfElementLocated(email));
+    return emailInput.getAttribute("validationMessage");
+}
+
+public String getPasswordValidationMessage() {
+    WebElement passwordInput = wait.until(ExpectedConditions.visibilityOfElementLocated(password));
+    return passwordInput.getAttribute("validationMessage");
+}
+
+public String getConfirmPasswordValidationMessage() {
+    WebElement confirmInput = wait.until(ExpectedConditions.visibilityOfElementLocated(confirmPassword));
+    return confirmInput.getAttribute("validationMessage");
+}
+
+public boolean isCreateAccountButtonEnabled() {
+    return wait.until(ExpectedConditions.presenceOfElementLocated(createAccountBtn)).isEnabled();
+}
+
+public String getAlertMessageIfPresent() {
+    try {
+        Alert alert = wait.until(ExpectedConditions.alertIsPresent());
+        String text = alert.getText();
+        alert.accept();
+        return text;
+    } catch (Exception e) {
+        return "";
+    }
+}
+public String getAlertMessage() {
+    Alert alert = wait.until(ExpectedConditions.alertIsPresent());
+    String text = alert.getText();
+    alert.accept();
+    return text;
+}
 
     // ================= STEP 2 METHODS (FIXED) =================
 

@@ -15,9 +15,10 @@ public class BaseTest {
     protected WebDriver driver;
     protected WebDriverWait wait;
 
-    // ✅ ADD: URLs
-    protected String ONBOARD_URL = "http://localhost:5173/onboard-super-admin";
+    // ✅ URLs
+     
     protected String LOGIN_URL = "http://localhost:5173/login";
+   protected String ONBOARD_URL = "http://localhost:5173/onboard-super-admin";
 
     @BeforeMethod
     public void setup() {
@@ -27,21 +28,20 @@ public class BaseTest {
 
         driver.manage().window().maximize();
 
-        // ✅ Proper wait
         wait = new WebDriverWait(driver, Duration.ofSeconds(30));
 
-        // ✅ Clean state
         driver.manage().deleteAllCookies();
 
-        // 🔥 DEFAULT (keep your existing behavior)
-        driver.get(ONBOARD_URL);
+        // ❌ Do NOT open any URL here
+        // Each test class will decide which page to open
     }
 
-    // ✅ ADD: reusable method to switch URL
+    // ✅ Open Login page
     protected void openLoginPage() {
         driver.get(LOGIN_URL);
     }
 
+    // ✅ Open Onboarding page
     protected void openOnboardPage() {
         driver.get(ONBOARD_URL);
     }

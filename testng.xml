@@ -1,8 +1,17 @@
 <!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
-<suite name="OnboardingSuite">
-    <test name="OnboardingTests">
+
+<suite name="TraceCircle Suite">
+
+    <test name="Login Tests">
         <classes>
-            <class name="tests.OnboardingTest"/>
+            <class name="tests.LoginTest"/>
         </classes>
     </test>
+
+    <test name="Onboarding Tests">
+        <classes>
+            <class name="tests.OnboardingTestTest"/>
+        </classes>
+    </test>
+
 </suite>
