@@ -16,7 +16,7 @@ public class LoginPage {
         this.wait = wait;
     }
 
-   private By emailField = By.xpath("//label[normalize-space()='Email']/following::input[1]");
+   private By emailField = By.xpath("//input[@type='email']");
     private By passwordField = By.xpath("//input[@type='password']");
     private By loginBtn = By.xpath("//button[contains(text(),'Login')]");
     private By forgotPassword = By.xpath("//a[contains(text(),'Forgot')]");
@@ -40,7 +40,20 @@ public void pressEnter() {
     wait.until(ExpectedConditions.visibilityOfElementLocated(passwordField))
         .sendKeys(Keys.ENTER);
 }
-
+public String getEmailValidationMessage() {
+    try {
+        return driver.findElement(emailField).getAttribute("validationMessage");
+    } catch (Exception e) {
+        return "";
+    }
+}
+public String getPasswordValidationMessage() {
+    try {
+        return driver.findElement(passwordField).getAttribute("validationMessage");
+    } catch (Exception e) {
+        return "";
+    }
+}
 
 // 🔹 Forgot Password click (TC_LGN_011)
 public void clickForgotPassword() {

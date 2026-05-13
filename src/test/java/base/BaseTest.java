@@ -19,7 +19,11 @@ public class BaseTest {
      
     protected String LOGIN_URL = "http://localhost:5173/login";
    protected String ONBOARD_URL = "http://localhost:5173/onboard-super-admin";
-
+protected String FORGOT_PASSWORD_URL = "http://localhost:5173/forget-password";
+protected String VERIFY_OTP_URL = "http://localhost:5173/verify-otp";
+protected String RESET_PASSWORD_URL = "http://localhost:5173/new-password";
+protected String GTIN_URL = "http://localhost:5173/gtin/add/";
+protected String PLANTS_URL = "http://localhost:5173/plants";
     @BeforeMethod
     public void setup() {
 
@@ -45,8 +49,19 @@ public class BaseTest {
     protected void openOnboardPage() {
         driver.get(ONBOARD_URL);
     }
-
-    @AfterMethod
+        protected void openForgotPasswordPage() {
+        driver.get(FORGOT_PASSWORD_URL);
+    }
+    protected void openOTPPage() {
+    driver.get(VERIFY_OTP_URL);
+}
+protected void openResetPasswordPage() {
+    driver.get(RESET_PASSWORD_URL);
+}
+protected void openPlantsPage() {
+    driver.get(PLANTS_URL);
+}
+     @AfterMethod
     public void tearDown() throws InterruptedException {
 
         Thread.sleep(5000);

@@ -12,6 +12,12 @@
         <classes>
             <class name="tests.OnboardingTestTest"/>
         </classes>
+        </test>
+        <test name="ForgotPassword Tests">
+        <classes>
+            <class name="tests.ForgotPasswordTest"/>
+        </classes>
+        
     </test>
 
 </suite>

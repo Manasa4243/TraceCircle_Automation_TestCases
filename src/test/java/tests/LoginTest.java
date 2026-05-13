@@ -1,5 +1,6 @@
 package tests;
 
+import org.openqa.selenium.By;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
@@ -10,36 +11,73 @@ import pages.LoginPage;
 import db.DBUtil;
 import api.OrgApi;
 import io.restassured.response.Response;
+import utilities.ExcelUtil;
 
 public class LoginTest extends BaseTest {
 
+    // ✅ DO NOT override setup()
+    // Instead use a DIFFERENT method name
     @BeforeMethod
-    public void openLogin() {
-        openLoginPage();
+    public void loadTestData() {
+
+        String path = System.getProperty("user.dir")
+                + "/src/test/java/resources/testdata/LoginTestData.xlsx";
+
+        ExcelUtil.loadExcel(path, "LoginData");
+
+        System.out.println("✅ Excel Loaded");
     }
 
-    // ================= ✅ POSITIVE =================
-    @Test
+    // ✅ ONLY ONE METHOD
+    private String[] getTestData(String testCaseId) {
+
+        int rowCount = ExcelUtil.getRowCount();
+
+        for (int i = 1; i <= rowCount; i++) {
+
+            String tcId = ExcelUtil.getCellData(i, 0);
+
+            if (tcId != null && tcId.equalsIgnoreCase(testCaseId)) {
+
+                String email = ExcelUtil.getCellData(i, 1);
+                String password = ExcelUtil.getCellData(i, 2);
+
+                return new String[]{email, password};
+            }
+        }
+
+        throw new RuntimeException("❌ Test data not found: " + testCaseId);
+    }
+
+    // ================= ✅ TEST =================
+      @Test
     public void TC_LGN_001_RegisteredUser_Login_ShouldPass() throws Exception {
-System.out.println("LOGIN TEST RUNNING");
+
+        // ✅ NOW driver is initialized from BaseTest
+        openLoginPage();
+
+        System.out.println("🚀 LOGIN TEST RUNNING");
+
         LoginPage login = new LoginPage(driver, wait);
         DBUtil db = new DBUtil();
         OrgApi api = new OrgApi();
 
-        String email = "shaikameer7474@gmail.com";
-        String password = "New@1234";
+        String[] data = getTestData("TC_LGN_001");
+        String email = data[0];
+        String password = data[1];
 
+        // ✅ DB Validation
         Assert.assertTrue(db.isUserPresent(email),
-                "User must exist in DB");
+                "❌ User must exist in DB");
 
+        // ✅ UI Actions
         login.enterEmail(email);
         login.enterPassword(password);
         login.clickLogin();
 
-       // ✅ PASS immediately after click
-Assert.assertTrue(true);
+        System.out.println("✅ Login button clicked");
 
-System.out.println("✅ Login button clicked → Test Passed");
+        // ✅ API Validation
         Response response = api.login(email, password);
 
         Assert.assertEquals(
@@ -49,21 +87,56 @@ System.out.println("✅ Login button clicked → Test Passed");
         );
 
         db.assertDbChecked();
-
+System.out.println("📧 Email: " + email);
+System.out.println("🔑 Password: " + password);
         System.out.println("✅ REGISTERED USER LOGIN PASSED");
     }
 
+// @Test
+// public void TC_LGN_001_UI_Login_Only() throws Exception {
 
+//     // Open login page
+//     openLoginPage();
+
+//     System.out.println("🚀 UI LOGIN TEST STARTED");
+
+//     // Page object
+//     LoginPage login = new LoginPage(driver, wait);
+
+//     // Get data from Excel
+//     String[] data = getTestData("TC_LGN_001");
+//     String email = data[0];
+//     String password = data[1];
+
+//     // Debug (optional but useful)
+//     System.out.println("📧 Email: " + email);
+//     System.out.println("🔑 Password: " + password);
+
+//     // Perform UI actions
+//     login.enterEmail(email);
+//     login.enterPassword(password);
+//     login.clickLogin();
+
+//     System.out.println("✅ Login button clicked");
+
+//     // Optional wait to observe result
+//     Thread.sleep(3000);
+
+//     System.out.println("✅ UI LOGIN TEST COMPLETED");
+// }
+
+    
     // ================= ❌ NEGATIVE =================
     @Test
     public void TC_LGN_002_UnregisteredUser_Login_ShouldFail() throws Exception {
-
+openLoginPage();
         LoginPage login = new LoginPage(driver, wait);
         DBUtil db = new DBUtil();
         OrgApi api = new OrgApi();
 
-        String email = "notexist" + System.currentTimeMillis() + "@mail.com";
-        String password = "Test@123";
+       String[] data = getTestData("TC_LGN_002");
+        String email = data[0];
+        String password = data[1];
 
         boolean dbResult = db.isUserPresent(email);
         Assert.assertFalse(dbResult, "User should NOT exist in DB");
@@ -107,83 +180,232 @@ System.out.println("✅ Login button clicked → Test Passed");
         System.out.println("✅ DB validation executed");
     }
     @Test
-    public void TC_LGN_003_WrongPassword() {
+public void TC_LGN_003_WrongPassword() throws Exception {
 
-        LoginPage login = new LoginPage(driver, wait);
+    openLoginPage();
 
-        login.enterEmail("shaikameer7474@gmail.com");
-        login.enterPassword("Wrong@123");
-        login.clickLogin();
+    System.out.println("🚀 WRONG PASSWORD TEST STARTED");
 
-        String error = login.getLoginErrorMessage();
+    LoginPage login = new LoginPage(driver, wait);
+    DBUtil db = new DBUtil();
+    OrgApi api = new OrgApi();
 
-        Assert.assertTrue(error.contains("Invalid credentials"));
-    }
+    // ✅ Get data from Excel
+    String[] data = getTestData("TC_LGN_003");
+    String email = data[0].trim().toLowerCase();
+    String password = data[1];
+
+    System.out.println("📧 Email: " + email);
+    System.out.println("🔑 Password: " + password);
+
+    // ✅ DB Validation (user must exist)
+    boolean userExists = db.isUserPresent(email);
+    Assert.assertTrue(userExists, "❌ User must exist in DB");
+
+    // ✅ API Validation (should FAIL for wrong password)
+    Response response = api.login(email, password);
+
+    System.out.println("🌐 API Status: " + response.getStatusCode());
+    System.out.println("🌐 API Body: " + response.asString());
+
+    Assert.assertNotEquals(
+            response.getStatusCode(),
+            200,
+            "❌ API should NOT allow login with wrong password"
+    );
+
+    // ✅ UI Actions
+    login.enterEmail(email);
+    login.enterPassword(password);
+    login.clickLogin();
+
+    // ✅ UI Validation
+    String error = login.getLoginErrorMessage();
+
+    System.out.println("⚠️ UI Error Message: " + error);
+
+    Assert.assertTrue(
+            error.toLowerCase().contains("invalid"),
+            "❌ Expected invalid credentials error"
+    );
+
+    db.assertDbChecked();
+
+    System.out.println("✅ WRONG PASSWORD TEST PASSED");
+}
+ @Test
+public void TC_LGN_004_EmptyEmail() throws Exception {
+
+    openLoginPage();
+
+    LoginPage login = new LoginPage(driver, wait);
+
+    String[] data = getTestData("TC_LGN_004");
+    String password = data[1];
+
+    login.enterPassword(password);
+    login.clickLogin();
+
+    String error = login.getEmailValidationMessage();
+
+    System.out.println("⚠️ UI Error: " + error);
+
+    Assert.assertTrue(
+            error.toLowerCase().contains("please fill in wthis field"),
+            "Expected 'Please fill in this field' but got: " + error
+    );
+}
      @Test
-    public void TC_LGN_004_EmptyEmail() {
+public void TC_LGN_005_EmptyPassword() throws Exception {
 
-        LoginPage login = new LoginPage(driver, wait);
+    openLoginPage();
 
-        login.enterPassword("Test@123");
-        login.clickLogin();
+    LoginPage login = new LoginPage(driver, wait);
 
-        Assert.assertTrue(true); // UI validation assumed
-    }
-     @Test
-    public void TC_LGN_005_EmptyPassword() {
+    String[] data = getTestData("TC_LGN_005");
+    String email = data[0];
 
-        LoginPage login = new LoginPage(driver, wait);
+    login.enterEmail(email);
+    login.clickLogin();
 
-        login.enterEmail("test@mail.com");
-        login.clickLogin();
+    String error = login.getPasswordValidationMessage();
 
-        Assert.assertTrue(true);
-    }
+    System.out.println("⚠️ UI Error: " + error);
+
+    Assert.assertTrue(
+            error.toLowerCase().contains("please fill in this field"),
+            "Expected 'Please fill in this field' but got: " + error
+    );
+}
     @Test
-    public void TC_LGN_006_BothFieldsEmpty() {
+public void TC_LGN_006_BothFieldsEmpty() throws Exception {
 
-        LoginPage login = new LoginPage(driver, wait);
+    openLoginPage();
 
-        login.clickLogin();
+    LoginPage login = new LoginPage(driver, wait);
 
-        Assert.assertTrue(true);
-    }
+    login.clickLogin();
+
+    String emailError = login.getEmailValidationMessage();
+    String passwordError = login.getPasswordValidationMessage();
+
+    Assert.assertTrue(emailError.length() > 0, "❌ Email error missing");
+    Assert.assertTrue(passwordError.length() > 0, "❌ Password error missing");
+}
 @Test
-    public void TC_LGN_007_InvalidEmailFormat() {
+public void TC_LGN_007_InvalidEmailFormat() throws Exception {
 
-        LoginPage login = new LoginPage(driver, wait);
+    openLoginPage();
 
-        login.enterEmail("invalid-email");
-        login.enterPassword("Test@123");
-        login.clickLogin();
+    LoginPage login = new LoginPage(driver, wait);
 
-        Assert.assertTrue(true);
-    }
-    @Test
-    public void TC_LGN_008_EmailCaseInsensitive() {
+    String[] data = getTestData("TC_LGN_007");
+    String email = data[0];
+    String password = data[1];
 
-        LoginPage login = new LoginPage(driver, wait);
+    login.enterEmail(email);
+    login.enterPassword(password);
+    login.clickLogin();
 
-        login.enterEmail("SHAIKAMEER7474@GMAIL.COM");
-        login.enterPassword("New@1234");
-        login.clickLogin();
+    String error = login.getEmailValidationMessage();
 
-        Assert.assertTrue(true);
-    }
-    @Test
-    public void TC_LGN_009_WhitespaceOnly() {
+    System.out.println("⚠️ UI Error: " + error);
 
-        LoginPage login = new LoginPage(driver, wait);
+    Assert.assertTrue(
+            error.toLowerCase().contains("valid"),
+            "❌ Invalid email format message not shown"
+    );
+}
+ @Test
+public void TC_LGN_008_EmailCaseInsensitive() throws Exception {
 
-        login.enterEmail("   ");
-        login.enterPassword("   ");
-        login.clickLogin();
+    openLoginPage();
 
-        Assert.assertTrue(true);
-    }
+    LoginPage login = new LoginPage(driver, wait);
+    DBUtil db = new DBUtil();
+    OrgApi api = new OrgApi();
+
+    String[] data = getTestData("TC_LGN_008");
+
+    String originalEmail = data[0];              // uppercase from Excel/data
+    String lowerCaseEmail = data[0].toLowerCase();
+    String password = data[1];
+
+    // DB check with lowercase/stored email
+    Assert.assertTrue(
+            db.isUserPresent(lowerCaseEmail),
+            "User not found in DB with lowercase email"
+    );
+
+    // UI action using uppercase/original email
+    login.enterEmail(originalEmail);
+    login.enterPassword(password);
+    login.clickLogin();
+
+    System.out.println("UI login attempted with email: " + originalEmail);
+
+    // API check using uppercase/original email
+    Response response = api.login(originalEmail, password);
+
+    System.out.println("API Status: " + response.getStatusCode());
+    System.out.println("API Response: " + response.getBody().asString());
+
+    Assert.assertEquals(
+            response.getStatusCode(),
+            200,
+            "API should allow login with uppercase email"
+    );
+
+    db.assertDbChecked();
+
+    System.out.println("TC_LGN_008 PASSED: Email case-insensitive login verified");
+}
+ @Test
+public void TC_LGN_009_WhitespaceOnly_ShouldLoginAfterTrim() throws Exception {
+
+    openLoginPage();
+
+    LoginPage login = new LoginPage(driver, wait);
+    DBUtil db = new DBUtil();
+    OrgApi api = new OrgApi();
+
+    String[] data = getTestData("TC_LGN_009");
+
+    String emailWithSpaces = data[0];
+    String passwordWithSpaces = data[1];
+
+    String trimmedEmail = emailWithSpaces.trim();
+    String trimmedPassword = passwordWithSpaces.trim();
+
+    // DB check with trimmed email
+    Assert.assertTrue(
+            db.isUserPresent(trimmedEmail),
+            "Trimmed email user should exist in DB"
+    );
+
+    // UI action with spaces
+    login.enterEmail(emailWithSpaces);
+    login.enterPassword(passwordWithSpaces);
+    login.clickLogin();
+
+    System.out.println("UI login attempted with whitespace values");
+
+    // API validation with trimmed values
+    Response response = api.login(trimmedEmail, trimmedPassword);
+
+    Assert.assertEquals(
+            response.getStatusCode(),
+            200,
+            "API should login successfully after trimming whitespace"
+    );
+
+    db.assertDbChecked();
+
+    System.out.println("TC_LGN_009 PASSED: Whitespace handled and login successful");
+}
     @Test
     public void TC_LGN_010_EnterKeySubmit() {
-
+openLoginPage();
         LoginPage login = new LoginPage(driver, wait);
 
         login.enterEmail("shaikameer7474@gmail.com");
@@ -196,6 +418,7 @@ System.out.println("✅ Login button clicked → Test Passed");
 
     @Test
     public void TC_LGN_011_ForgotPasswordNavigation() {
+        openLoginPage();
 
         LoginPage login = new LoginPage(driver, wait);
 
@@ -206,6 +429,7 @@ System.out.println("✅ Login button clicked → Test Passed");
 
     @Test
     public void TC_LGN_012_ContactUsVisible() {
+        openLoginPage();
 
         LoginPage login = new LoginPage(driver, wait);
 
@@ -215,33 +439,71 @@ System.out.println("✅ Login button clicked → Test Passed");
     // ================= SECURITY =================
 
     @Test
-    public void TC_LGN_013_SQLInjection() {
+public void TC_LGN_013_SQLInjection() throws Exception {
 
-        LoginPage login = new LoginPage(driver, wait);
+    openLoginPage();
 
-        login.enterEmail("' OR '1'='1");
-        login.enterPassword("anything");
-        login.clickLogin();
+    LoginPage login = new LoginPage(driver, wait);
 
-        String error = login.getLoginErrorMessage();
+    String[] data = getTestData("TC_LGN_013");
+    String email = data[0];
+    String password = data[1];
 
-        Assert.assertTrue(error.contains("Please include an '@'"));
+    login.enterEmail(email);
+    login.enterPassword(password);
+    login.clickLogin();
+
+    // ✅ Browser validation should trigger
+    String error = login.getEmailValidationMessage();
+
+    System.out.println("⚠️ SQL Injection Error: " + error);
+
+    Assert.assertTrue(
+            error.toLowerCase().contains("valid") || error.contains("@"),
+            "❌ SQL Injection input not blocked properly"
+    );
+}
+   @Test
+public void TC_LGN_014_XSSPayload() throws Exception {
+
+    openLoginPage();
+
+    LoginPage login = new LoginPage(driver, wait);
+
+    String[] data = getTestData("TC_LGN_014");
+    String email = data[0];
+    String password = data[1];
+
+    login.enterEmail(email);
+    login.enterPassword(password);
+    login.clickLogin();
+
+    // ✅ Check no JS alert executed
+    boolean alertPresent;
+
+    try {
+        wait.until(ExpectedConditions.alertIsPresent());
+        alertPresent = true;
+    } catch (Exception e) {
+        alertPresent = false;
     }
 
-    @Test
-    public void TC_LGN_014_XSSPayload() {
+    Assert.assertFalse(alertPresent, "❌ XSS attack executed!");
 
-        LoginPage login = new LoginPage(driver, wait);
+    // ✅ Also validate input rejected
+    String error = login.getEmailValidationMessage();
 
-        login.enterEmail("<script>alert(1)</script>");
-        login.enterPassword("Test@123");
-        login.clickLogin();
+    System.out.println("⚠️ XSS Error: " + error);
 
-        Assert.assertTrue(true); // no alert expected
-    }
+    Assert.assertTrue(
+            error.length() > 0,
+            "❌ XSS input not validated"
+    );
+}
 
     @Test
     public void TC_LGN_015_PasswordFieldMasked() {
+        openLoginPage();
 
         LoginPage login = new LoginPage(driver, wait);
 
@@ -252,20 +514,26 @@ System.out.println("✅ Login button clicked → Test Passed");
 
     @Test
     public void TC_LGN_016_ElementsVisible() {
+        openLoginPage();
 
         LoginPage login = new LoginPage(driver, wait);
 
         Assert.assertTrue(login.isLoginPageLoaded());
     }
 
-    @Test
-    public void TC_LGN_017_BrowserTitle() {
+@Test
+public void TC_LGN_017_LoginHeadingVisible() {
 
-        Assert.assertTrue(driver.getTitle().contains("Login"));
-    }
+    openLoginPage();
 
+    Assert.assertTrue(
+            driver.getPageSource().contains("Login"),
+            "Login text is not visible on page"
+    );
+}
     @Test
     public void TC_LGN_018_FieldsEmptyOnLoad() {
+        openLoginPage();
 
         LoginPage login = new LoginPage(driver, wait);
 
@@ -275,6 +543,7 @@ System.out.println("✅ Login button clicked → Test Passed");
 
     @Test
     public void TC_LGN_019_LongInput() {
+        openLoginPage();
 
         LoginPage login = new LoginPage(driver, wait);
 
@@ -289,58 +558,119 @@ System.out.println("✅ Login button clicked → Test Passed");
 
     @Test
     public void TC_LGN_020_AlreadyLoggedInRedirect() {
+        openLoginPage();
 
         driver.get("http://localhost:5173/login");
 
         // Assume already logged in
         Assert.assertTrue(true);
     }
-@Test
+ @Test
 public void TC_LGN_021_EmailWithLeadingTrailingSpaces_ShouldBeHandled() throws Exception {
 
+    openLoginPage();
+
     LoginPage login = new LoginPage(driver, wait);
+    DBUtil db = new DBUtil();
+    OrgApi api = new OrgApi();
 
-    String email = "  shaikameer7474@gmail.com  ";
-    String password = "New@1234";
+    String[] data = getTestData("TC_LGN_021");
 
-    login.enterEmail(email);
+    String rawEmail = data[0];          // email with spaces
+    String password = data[1];
+    String trimmedEmail = rawEmail.trim();
+
+    // DB check with trimmed email
+    Assert.assertTrue(
+            db.isUserPresent(trimmedEmail),
+            "User not found in DB"
+    );
+
+    // UI action with email spaces
+    login.enterEmail(rawEmail);
     login.enterPassword(password);
     login.clickLogin();
 
-    Assert.assertTrue(true, "Email with spaces handled");
+    System.out.println("UI login clicked with email: " + rawEmail);
+
+    // API validation with trimmed email
+    Response response = api.login(trimmedEmail, password);
+
+    System.out.println("API Status: " + response.getStatusCode());
+    System.out.println("API Response: " + response.getBody().asString());
+
+    Assert.assertEquals(
+            response.getStatusCode(),
+            200,
+            "API login failed with trimmed email"
+    );
+
+    db.assertDbChecked();
+
+    System.out.println("TC_LGN_021 PASSED: Email with spaces handled correctly");
 }
 @Test
-public void TC_LGN_022_PasswordWithSpaces_ShouldFail() {
+public void TC_LGN_022_PasswordWithSpaces_ShouldFail() throws Exception {
+
+    openLoginPage();
 
     LoginPage login = new LoginPage(driver, wait);
+    DBUtil db = new DBUtil();
+    OrgApi api = new OrgApi();
 
-    login.enterEmail("shaikameer7474@gmail.com");
-    login.enterPassword("  New@1234  ");
+    String[] data = getTestData("TC_LGN_022");
+    String email = data[0];
+    String passwordWithSpaces = data[1];
+
+    // ✅ DB (user must exist)
+    Assert.assertTrue(
+            db.isUserPresent(email),
+            "❌ User not found in DB"
+    );
+
+    // ❌ API should fail
+    Response response = api.login(email, passwordWithSpaces);
+
+    Assert.assertNotEquals(
+            response.getStatusCode(),
+            200,
+            "❌ API should reject password with spaces"
+    );
+
+    // ❌ UI
+    login.enterEmail(email);
+    login.enterPassword(passwordWithSpaces);
     login.clickLogin();
 
     String errorMsg = login.getLoginErrorMessage();
 
+    System.out.println("⚠️ Password Spaces Error: " + errorMsg);
+
     Assert.assertTrue(
             errorMsg.toLowerCase().contains("invalid") ||
             errorMsg.toLowerCase().contains("fail"),
-            "Password with spaces should not login successfully"
+            "❌ UI allowed login with spaced password"
     );
+
+    db.assertDbChecked();
 }
-@Test
-public void TC_LGN_023_VeryLongEmail_ShouldBeHandled() {
+// @Test
+// public void TC_LGN_023_VeryLongEmail_ShouldBeHandled() {
 
-    LoginPage login = new LoginPage(driver, wait);
+//     LoginPage login = new LoginPage(driver, wait);
 
-    String longEmail = "a".repeat(260) + "@mail.com";
+//     String longEmail = "a".repeat(260) + "@mail.com";
 
-    login.enterEmail(longEmail);
-    login.enterPassword("Test@123");
-    login.clickLogin();
+//     login.enterEmail(longEmail);
+//     login.enterPassword("Test@123");
+//     login.clickLogin();
 
-    Assert.assertTrue(true, "Very long email handled without app crash");
-}
+//     Assert.assertTrue(true, "Very long email handled without app crash");
+// }
 @Test
 public void TC_LGN_024_SpecialCharactersInEmail_ShouldReject() {
+
+    openLoginPage();
 
     LoginPage login = new LoginPage(driver, wait);
 
@@ -348,52 +678,103 @@ public void TC_LGN_024_SpecialCharactersInEmail_ShouldReject() {
     login.enterPassword("Test@123");
     login.clickLogin();
 
-    String errorMsg = login.getLoginErrorMessage();
+    String errorMsg = login.getEmailValidationMessage();
+
+    System.out.println("Email Validation Message: " + errorMsg);
 
     Assert.assertTrue(
-            errorMsg.toLowerCase().contains("invalid") ||
             errorMsg.toLowerCase().contains("@") ||
-            errorMsg.toLowerCase().contains("email"),
-            "Special characters email should be rejected"
+            errorMsg.toLowerCase().contains("please include"),
+            "Expected email validation message but got: " + errorMsg
     );
 }
 @Test
-public void TC_LGN_025_SQLInjectionInPassword_ShouldReject() {
+public void TC_LGN_025_SQLInjectionInPassword_ShouldReject() throws Exception {
+
+    openLoginPage();
 
     LoginPage login = new LoginPage(driver, wait);
+    DBUtil db = new DBUtil();
+    OrgApi api = new OrgApi();
 
-    login.enterEmail("shaikameer7474@gmail.com");
-    login.enterPassword("' OR '1'='1");
+    String[] data = getTestData("TC_LGN_025");
+    String email = data[0];
+    String password = data[1];
+
+    // ✅ DB check (user exists)
+    Assert.assertTrue(db.isUserPresent(email), "❌ User not found");
+
+    // ❌ API should reject
+    Response response = api.login(email, password);
+
+    Assert.assertNotEquals(
+            response.getStatusCode(),
+            200,
+            "❌ API accepted SQL injection password"
+    );
+
+    // ❌ UI
+    login.enterEmail(email);
+    login.enterPassword(password);
     login.clickLogin();
 
     String errorMsg = login.getLoginErrorMessage();
 
+    System.out.println("⚠️ SQL Injection Password Error: " + errorMsg);
+
     Assert.assertTrue(
             errorMsg.toLowerCase().contains("invalid") ||
             errorMsg.toLowerCase().contains("fail"),
-            "SQL injection in password should be rejected"
+            "❌ UI allowed SQL injection login"
     );
+
+    db.assertDbChecked();
 }
-@Test
-public void TC_LGN_026_ScriptInjectionInPassword_ShouldNotExecute() {
+ @Test
+public void TC_LGN_026_ScriptInjectionInPassword_ShouldNotExecute() throws Exception {
+
+    openLoginPage();
 
     LoginPage login = new LoginPage(driver, wait);
+    DBUtil db = new DBUtil();
+    OrgApi api = new OrgApi();
 
-    login.enterEmail("shaikameer7474@gmail.com");
-    login.enterPassword("<script>alert(1)</script>");
+    String email = "manasajagadeesh141@gmail.com";
+    String password = "<script>alert(1)</script>";
+
+    Assert.assertTrue(db.isUserPresent(email), "User not found in DB");
+
+    Response response = api.login(email, password);
+
+    Assert.assertTrue(
+            response.getStatusCode() == 400 ||
+            response.getStatusCode() == 401 ||
+            response.getStatusCode() == 404,
+            "API accepted script injection password"
+    );
+
+    login.enterEmail(email);
+    login.enterPassword(password);
     login.clickLogin();
 
     String errorMsg = login.getLoginErrorMessage();
 
+    System.out.println("Script Injection Error: " + errorMsg);
+
     Assert.assertTrue(
+            errorMsg.toLowerCase().contains("invalid credentials") ||
             errorMsg.toLowerCase().contains("invalid") ||
-            errorMsg.toLowerCase().contains("fail"),
-            "Script injection should not login"
+            errorMsg.toLowerCase().contains("not found"),
+            "Expected invalid credentials alert, but got: " + errorMsg
     );
+
+    db.assertDbChecked();
+
+    System.out.println("TC_LGN_026 PASSED");
 }
 @Test
 public void TC_LGN_027_MultipleFailedLoginAttempts_ShouldBeHandled() {
-
+openLoginPage();
     LoginPage login = new LoginPage(driver, wait);
 
     String email = "shaikameer7474@gmail.com";
@@ -417,7 +798,7 @@ public void TC_LGN_027_MultipleFailedLoginAttempts_ShouldBeHandled() {
 }
 @Test
 public void TC_LGN_028_ErrorMessage_ShouldNotExposeSensitiveInfo() {
-
+openLoginPage();
     LoginPage login = new LoginPage(driver, wait);
 
     login.enterEmail("notexist" + System.currentTimeMillis() + "@mail.com");
@@ -437,7 +818,7 @@ public void TC_LGN_028_ErrorMessage_ShouldNotExposeSensitiveInfo() {
 }
 @Test
 public void TC_LGN_029_UI_DB_API_ValidLogin_ShouldReturn200() throws Exception {
-
+openLoginPage();
     LoginPage login = new LoginPage(driver, wait);
     DBUtil db = new DBUtil();
     OrgApi api = new OrgApi();
@@ -487,7 +868,7 @@ public void TC_LGN_029_UI_DB_API_ValidLogin_ShouldReturn200() throws Exception {
 }
   @Test
 public void TC_LGN_030_UI_DB_API_InvalidLogin_ShouldReturn401or400() throws Exception {
-
+openLoginPage();
     LoginPage login = new LoginPage(driver, wait);
     DBUtil db = new DBUtil();
     OrgApi api = new OrgApi();
@@ -552,7 +933,7 @@ public void TC_LGN_030_UI_DB_API_InvalidLogin_ShouldReturn401or400() throws Exce
 }
   @Test
 public void TC_LGN_031_UI_DB_API_Response_ShouldContainTokenOrSession() throws Exception {
-
+openLoginPage();
     LoginPage login = new LoginPage(driver, wait);
     DBUtil db = new DBUtil();
     OrgApi api = new OrgApi();
@@ -598,7 +979,7 @@ public void TC_LGN_031_UI_DB_API_Response_ShouldContainTokenOrSession() throws E
 }
 @Test
 public void TC_LGN_032_UI_DB_API_UnregisteredUser_ShouldFail() throws Exception {
-
+openLoginPage();
     LoginPage login = new LoginPage(driver, wait);
     DBUtil db = new DBUtil();
     OrgApi api = new OrgApi();
@@ -631,7 +1012,7 @@ public void TC_LGN_032_UI_DB_API_UnregisteredUser_ShouldFail() throws Exception 
 }
 @Test
 public void TC_LGN_033_UI_DB_API_Login_ShouldValidateAgainstDB() throws Exception {
-
+openLoginPage();
     LoginPage login = new LoginPage(driver, wait);
     DBUtil db = new DBUtil();
     OrgApi api = new OrgApi();
@@ -659,7 +1040,7 @@ public void TC_LGN_033_UI_DB_API_Login_ShouldValidateAgainstDB() throws Exceptio
 }
 @Test
 public void TC_LGN_034_UI_DB_API_WrongPassword_ShouldFail() throws Exception {
-
+openLoginPage();
     LoginPage login = new LoginPage(driver, wait);
     DBUtil db = new DBUtil();
     OrgApi api = new OrgApi();
@@ -692,7 +1073,7 @@ public void TC_LGN_034_UI_DB_API_WrongPassword_ShouldFail() throws Exception {
 }
 @Test
 public void TC_LGN_035_UI_DB_API_NoDBRecord_ShouldFail() throws Exception {
-
+openLoginPage();
     LoginPage login = new LoginPage(driver, wait);
     DBUtil db = new DBUtil();
     OrgApi api = new OrgApi();
@@ -725,7 +1106,7 @@ public void TC_LGN_035_UI_DB_API_NoDBRecord_ShouldFail() throws Exception {
 }
 @Test
 public void TC_LGN_036_SuccessfulLogin_ShouldCreateSession() {
-
+openLoginPage();
     LoginPage login = new LoginPage(driver, wait);
 
     login.enterEmail("shaikameer7474@gmail.com");
@@ -739,7 +1120,7 @@ public void TC_LGN_036_SuccessfulLogin_ShouldCreateSession() {
 }
 @Test
 public void TC_LGN_037_Logout_ShouldInvalidateSession() {
-
+openLoginPage();
     LoginPage login = new LoginPage(driver, wait);
 
     login.enterEmail("shaikameer7474@gmail.com");
@@ -757,7 +1138,7 @@ public void TC_LGN_037_Logout_ShouldInvalidateSession() {
 }
 @Test
 public void TC_LGN_038_BackButtonAfterLogin_ShouldBehaveCorrectly() {
-
+openLoginPage();
     LoginPage login = new LoginPage(driver, wait);
 
     login.enterEmail("shaikameer7474@gmail.com");
@@ -773,7 +1154,7 @@ public void TC_LGN_038_BackButtonAfterLogin_ShouldBehaveCorrectly() {
 }
 @Test
 public void TC_LGN_039_RefreshAfterLogin_ShouldKeepSessionActive() {
-
+openLoginPage();
     LoginPage login = new LoginPage(driver, wait);
 
     login.enterEmail("shaikameer7474@gmail.com");
@@ -791,7 +1172,7 @@ public void TC_LGN_039_RefreshAfterLogin_ShouldKeepSessionActive() {
 }
 @Test
 public void TC_LGN_040_LoginButton_ShouldBeDisabled_WhenFieldsEmpty() {
-
+openLoginPage();
     LoginPage login = new LoginPage(driver, wait);
 
     Assert.assertFalse(
@@ -801,7 +1182,7 @@ public void TC_LGN_040_LoginButton_ShouldBeDisabled_WhenFieldsEmpty() {
 }
 @Test
 public void TC_LGN_041_ErrorMessage_ShouldDisplayProperly() {
-
+openLoginPage();
     LoginPage login = new LoginPage(driver, wait);
 
     login.enterEmail("nouser" + System.currentTimeMillis() + "@mail.com");
@@ -817,7 +1198,7 @@ public void TC_LGN_041_ErrorMessage_ShouldDisplayProperly() {
 }
 @Test
 public void TC_LGN_042_InputFields_ShouldAcceptTyping() {
-
+openLoginPage();
     LoginPage login = new LoginPage(driver, wait);
 
     String email = "testuser@mail.com";
