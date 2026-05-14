@@ -4,15 +4,18 @@ on:
   push:
     branches:
       - main
+
   pull_request:
     branches:
       - main
 
 jobs:
   run-tests:
+
     runs-on: self-hosted
 
     steps:
+
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -21,9 +24,6 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
-
-      - name: Set up Chrome
-        uses: browser-actions/setup-chrome@v1
 
       - name: Run Maven Tests
         run: mvn clean test
